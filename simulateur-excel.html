@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur Microsoft Excel - TKWIN+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .text-body {
+            font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .excel-ribbon {
+            background: linear-gradient(to bottom, #f3f3f3 0%, #e9e9e9 100%);
+            border-bottom: 1px solid #d4d4d4;
+        }
+        .ribbon-tab {
+            padding: 8px 16px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ribbon-tab:hover {
+            background: rgba(255, 255, 255, 0.7);
+            border-color: #d4d4d4;
+        }
+        .ribbon-tab.active {
+            background: white;
+            border-color: #d4d4d4;
+            border-bottom-color: white;
+            margin-bottom: -1px;
+        }
+        .ribbon-button {
+            padding: 6px 12px;
+            border: 1px solid transparent;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+        }
+        .ribbon-button:hover {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: #22c55e;
+        }
+        .ribbon-button.active {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: #22c55e;
+        }
+        .spreadsheet-container {
+            background: white;
+            border: 1px solid #d4d4d4;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .spreadsheet-header {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px;
+            font-weight: 600;
+            color: #374151;
+        }
+        .spreadsheet {
+            display: grid;
+            grid-template-columns: 50px repeat(10, 100px);
+            grid-template-rows: 30px repeat(20, 25px);
+            overflow: auto;
+            max-height: 500px;
+        }
+        .cell {
+            border: 1px solid #e5e7eb;
+            padding: 4px 8px;
+            font-size: 12px;
+            background: white;
+            cursor: cell;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        .cell:hover {
+            background: #f3f4f6;
+        }
+        .cell.selected {
+            background: #dbeafe;
+            border-color: #3b82f6;
+        }
+        .cell.header {
+            background: #f8fafc;
+            font-weight: 600;
+            text-align: center;
+            justify-content: center;
+            cursor: default;
+        }
+        .cell.row-header {
+            background: #f8fafc;
+            font-weight: 600;
+            text-align: center;
+            justify-content: center;
+            cursor: default;
+        }
+        .formula-bar {
+            background: #f8fafc;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+        }
+        .sidebar-item.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+        .exercise-panel {
+            background: #f8fafc;
+            border-left: 4px solid #22c55e;
+        }
+        .chart-container {
+            background: white;
+            border: 1px solid #d4d4d4;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .function-helper {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 16px 0;
+            font-size: 14px;
+        }
+        .function-helper h4 {
+            color: #92400e;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .function-helper p {
+            color: #78350f;
+            margin-bottom: 4px;
+        }
+        .function-helper code {
+            background: #fbbf24;
+            color: #92400e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900">
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed w-full top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <img src="resources/tkwin-logo.png" alt="TKWIN+" class="h-8 w-8 mr-3">
+                    <span class="text-xl font-bold text-blue-600">TKWIN+</span>
+                    <span class="ml-4 text-gray-600">Simulateur Microsoft Excel</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="calculateAll()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                        Calculer
+                    </button>
+                    <button onclick="insertChart()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        Créer Graphique
+                    </button>
+                    <button onclick="window.location.href='dashboard.html'" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                        Retour au tableau de bord
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex pt-16">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white shadow-lg fixed left-0 top-16 bottom-0 z-30 overflow-y-auto">
+            <nav class="p-4 space-y-2">
+                <div class="sidebar-item p-3 cursor-pointer" onclick="window.location.href='dashboard.html'">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-gray-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+                        </svg>
+                        <span class="font-medium text-gray-700">Tableau de bord</span>
+                    </div>
+                </div>
+                
+                <div class="sidebar-item p-3 cursor-pointer" onclick="window.location.href='simulateur-word.html'">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span class="font-medium text-gray-700">Word</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-item active p-3 cursor-pointer">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span class="font-medium text-gray-900">Excel</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-item p-3 cursor-pointer" onclick="window.location.href='simulateur-powerpoint.html'">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-orange-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h4a1 1 0 110 2h-1v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6H3a1 1 0 110-2h4z" />
+                        </svg>
+                        <span class="font-medium text-gray-700">PowerPoint</span>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Function Helper -->
+            <div class="p-4">
+                <div class="function-helper">
+                    <h4>Aide aux fonctions</h4>
+                    <p><strong>SOMME:</strong> <code>=SOMME(A1:A10)</code></p>
+                    <p><strong>MOYENNE:</strong> <code>=MOYENNE(B1:B10)</code></p>
+                    <p><strong>SI:</strong> <code>=SI(A1>10,"Oui","Non")</code></p>
+                    <p><strong>NB:</strong> <code>=NB(A1:A10)</code></p>
+                    <p><strong>MAX:</strong> <code>=MAX(A1:A10)</code></p>
+                    <p><strong>MIN:</strong> <code>=MIN(A1:A10)</code></p>
+                </div>
+            </div>
+
+            <!-- Exercise Panel -->
+            <div class="exercise-panel p-4 m-4 rounded-lg">
+                <h4 class="font-semibold text-gray-900 mb-3">Exercice: Budget Annuel</h4>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <strong>Objectif:</strong> Créer un budget annuel avec formules automatiques
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input type="checkbox" checked disabled class="mr-2">
+                            <span class="text-green-600">Données saisies</span>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" class="mr-2" id="formulas-check">
+                            <span class="text-gray-600">Formules calculées</span>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" class="mr-2" id="chart-check">
+                            <span class="text-gray-600">Graphique créé</span>
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <div class="text-xs text-gray-600 mb-1">Progression</div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-green-600 h-2 rounded-full" style="width: 33%" id="exercise-progress"></div>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-1">33% complété</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 ml-64 p-6">
+            <!-- Formula Bar -->
+            <div class="formula-bar" id="formulaBar">
+                fx: Cliquez sur une cellule pour voir ou modifier sa formule
+            </div>
+
+            <!-- Spreadsheet -->
+            <div class="spreadsheet-container">
+                <div class="spreadsheet-header">
+                    <h3 class="text-lg font-semibold">Budget Annuel 2024 - Entreprise XYZ</h3>
+                </div>
+                <div class="spreadsheet" id="spreadsheet">
+                    <!-- Headers -->
+                    <div class="cell header"></div>
+                    <div class="cell header">A</div>
+                    <div class="cell header">B</div>
+                    <div class="cell header">C</div>
+                    <div class="cell header">D</div>
+                    <div class="cell header">E</div>
+                    <div class="cell header">F</div>
+                    <div class="cell header">G</div>
+                    <div class="cell header">H</div>
+                    <div class="cell header">I</div>
+                    <div class="cell header">J</div>
+
+                    <!-- Row 1 -->
+                    <div class="cell row-header">1</div>
+                    <div class="cell" data-cell="A1" style="font-weight: bold; background: #e5e7eb;">Rubriques</div>
+                    <div class="cell" data-cell="B1" style="font-weight: bold; background: #e5e7eb;">Janvier</div>
+                    <div class="cell" data-cell="C1" style="font-weight: bold; background: #e5e7eb;">Février</div>
+                    <div class="cell" data-cell="D1" style="font-weight: bold; background: #e5e7eb;">Mars</div>
+                    <div class="cell" data-cell="E1" style="font-weight: bold; background: #e5e7eb;">Avril</div>
+                    <div class="cell" data-cell="F1" style="font-weight: bold; background: #e5e7eb;">Mai</div>
+                    <div class="cell" data-cell="G1" style="font-weight: bold; background: #e5e7eb;">Juin</div>
+                    <div class="cell" data-cell="H1" style="font-weight: bold; background: #e5e7eb;">Total Trim</div>
+                    <div class="cell" data-cell="I1" style="font-weight: bold; background: #e5e7eb;">Budget</div>
+                    <div class="cell" data-cell="J1" style="font-weight: bold; background: #e5e7eb;">Écart</div>
+
+                    <!-- Row 2 -->
+                    <div class="cell row-header">2</div>
+                    <div class="cell" data-cell="A2">Salaires</div>
+                    <div class="cell" data-cell="B2" contenteditable="true">150000</div>
+                    <div class="cell" data-cell="C2" contenteditable="true">150000</div>
+                    <div class="cell" data-cell="D2" contenteditable="true">150000</div>
+                    <div class="cell" data-cell="E2" contenteditable="true">155000</div>
+                    <div class="cell" data-cell="F2" contenteditable="true">155000</div>
+                    <div class="cell" data-cell="G2" contenteditable="true">155000</div>
+                    <div class="cell" data-cell="H2" style="background: #fef3c7;" contenteditable="true">=SOMME(B2:G2)</div>
+                    <div class="cell" data-cell="I2" contenteditable="true">930000</div>
+                    <div class="cell" data-cell="J2" style="background: #dcfce7;" contenteditable="true">=I2-H2</div>
+
+                    <!-- Row 3 -->
+                    <div class="cell row-header">3</div>
+                    <div class="cell" data-cell="A3">Loyer</div>
+                    <div class="cell" data-cell="B3" contenteditable="true">25000</div>
+                    <div class="cell" data-cell="C3" contenteditable="true">25000</div>
+                    <div class="cell" data-cell="D3" contenteditable="true">25000</div>
+                    <div class="cell" data-cell="E3" contenteditable="true">25000</div>
+                    <div class="cell" data-cell="F3" contenteditable="true">25000</div>
+                    <div class="cell" data-cell="G3" contenteditable="true">25000</div>
+                    <div class="cell" data-cell="H3" style="background: #fef3c7;" contenteditable="true">=SOMME(B3:G3)</div>
+                    <div class="cell" data-cell="I3" contenteditable="true">150000</div>
+                    <div class="cell" data-cell="J3" style="background: #dcfce7;" contenteditable="true">=I3-H3</div>
+
+                    <!-- Row 4 -->
+                    <div class="cell row-header">4</div>
+                    <div class="cell" data-cell="A4">Marketing</div>
+                    <div class="cell" data-cell="B4" contenteditable="true">10000</div>
+                    <div class="cell" data-cell="C4" contenteditable="true">12000</div>
+                    <div class="cell" data-cell="D4" contenteditable="true">15000</div>
+                    <div class="cell" data-cell="E4" contenteditable="true">18000</div>
+                    <div class="cell" data-cell="F4" contenteditable="true">20000</div>
+                    <div class="cell" data-cell="G4" contenteditable="true">22000</div>
+                    <div class="cell" data-cell="H4" style="background: #fef3c7;" contenteditable="true">=SOMME(B4:G4)</div>
+                    <div class="cell" data-cell="I4" contenteditable="true">120000</div>
+                    <div class="cell" data-cell="J4" style="background: #dcfce7;" contenteditable="true">=I4-H4</div>
+
+                    <!-- Row 5 -->
+                    <div class="cell row-header">5</div>
+                    <div class="cell" data-cell="A5">Matériel IT</div>
+                    <div class="cell" data-cell="B5" contenteditable="true">5000</div>
+                    <div class="cell" data-cell="C5" contenteditable="true">3000</div>
+                    <div class="cell" data-cell="D5" contenteditable="true">8000</div>
+                    <div class="cell" data-cell="E5" contenteditable="true">2000</div>
+                    <div class="cell" data-cell="F5" contenteditable="true">10000</div>
+                    <div class="cell" data-cell="G5" contenteditable="true">6000</div>
+                    <div class="cell" data-cell="H5" style="background: #fef3c7;" contenteditable="true">=SOMME(B5:G5)</div>
+                    <div class="cell" data-cell="I5" contenteditable="true">50000</div>
+                    <div class="cell" data-cell="J5" style="background: #dcfce7;" contenteditable="true">=I5-H5</div>
+
+                    <!-- Row 6 -->
+                    <div class="cell row-header">6</div>
+                    <div class="cell" data-cell="A6" style="font-weight: bold; background: #e5e7eb;">TOTAL</div>
+                    <div class="cell" data-cell="B6" style="font-weight: bold; background: #e5e7eb;" contenteditable="true">=SOMME(B2:B5)</div>
+                    <div class="cell" data-cell="C6" style="font-weight: bold; background: #e5e7eb;" contenteditable="true">=SOMME(C2:C5)</div>
+                    <div class="cell" data-cell="D6" style="font-weight: bold; background: #e5e7eb;" contenteditable="true">=SOMME(D2:D5)</div>
+                    <div class="cell" data-cell="E6" style="font-weight: bold; background: #e5e7eb;" contenteditable="true">=SOMME(E2:E5)</div>
+                    <div class="cell" data-cell="F6" style="font-weight: bold; background: #e5e7eb;" contenteditable="true">=SOMME(F2:F5)</div>
+                    <div class="cell" data-cell="G6" style="font-weight: bold; background: #e5e7eb;" contenteditable="true">=SOMME(G2:G5)</div>
+                    <div class="cell" data-cell="H6" style="font-weight: bold; background: #fef3c7;" contenteditable="true">=SOMME(H2:H5)</div>
+                    <div class="cell" data-cell="I6" style="font-weight: bold; background: #e5e7eb;" contenteditable="true">=SOMME(I2:I5)</div>
+                    <div class="cell" data-cell="J6" style="font-weight: bold; background: #dcfce7;" contenteditable="true">=SOMME(J2:J5)</div>
+                </div>
+            </div>
+
+            <!-- Chart Container -->
+            <div class="chart-container" id="chartContainer" style="display: none;">
+                <h3 class="text-lg font-semibold mb-4">Graphique des dépenses mensuelles</h3>
+                <div id="expenseChart" style="height: 400px;"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let selectedCell = null;
+        let chart = null;
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSpreadsheet();
+            calculateAll();
+            
+            // Animation d'apparition
+            anime({
+                targets: '.spreadsheet-container',
+                opacity: [0, 1],
+                translateY: [20, 0],
+                duration: 800,
+                easing: 'easeOutQuart'
+            });
+        });
+
+        function initializeSpreadsheet() {
+            const cells = document.querySelectorAll('.cell[data-cell]');
+            cells.forEach(cell => {
+                cell.addEventListener('click', selectCell);
+                cell.addEventListener('input', handleCellInput);
+                cell.addEventListener('blur', calculateCell);
+            });
+        }
+
+        function selectCell(e) {
+            // Retirer la sélection précédente
+            if (selectedCell) {
+                selectedCell.classList.remove('selected');
+            }
+
+            // Sélectionner la nouvelle cellule
+            selectedCell = e.target;
+            selectedCell.classList.add('selected');
+
+            // Afficher la formule ou la valeur dans la barre de formule
+            const formulaBar = document.getElementById('formulaBar');
+            const cellValue = selectedCell.textContent;
+            
+            if (cellValue.startsWith('=')) {
+                formulaBar.textContent = 'fx: ' + cellValue;
+            } else {
+                formulaBar.textContent = 'fx: ' + cellValue;
+            }
+        }
+
+        function handleCellInput(e) {
+            const cell = e.target;
+            const value = cell.textContent;
+            
+            if (value.startsWith('=')) {
+                cell.style.background = '#fef3c7';
+            } else {
+                cell.style.background = 'white';
+            }
+        }
+
+        function calculateCell(e) {
+            const cell = e.target;
+            const value = cell.textContent;
+            
+            if (value.startsWith('=')) {
+                try {
+                    const result = evaluateFormula(value);
+                    cell.setAttribute('data-result', result);
+                    cell.style.background = '#dcfce7';
+                    updateExerciseProgress();
+                } catch (error) {
+                    cell.textContent = '#ERREUR';
+                    cell.style.background = '#fee2e2';
+                }
+            }
+        }
+
+        function evaluateFormula(formula) {
+            // Fonction simple d'évaluation des formules Excel
+            let expression = formula.substring(1); // Enlever le '='
+            
+            // Remplacer les références de cellules par leurs valeurs
+            const cellPattern = /([A-Z]+)(\d+)/g;
+            expression = expression.replace(cellPattern, (match, col, row) => {
+                const cell = document.querySelector(`[data-cell="${col}${row}"]`);
+                if (cell) {
+                    const value = parseFloat(cell.textContent) || 0;
+                    return value;
+                }
+                return 0;
+            });
+
+            // Remplacer les fonctions Excel par des équivalents JavaScript
+            expression = expression.replace(/SOMME\(/g, '(');
+            expression = expression.replace(/MOYENNE\(/g, '((');
+            expression = expression.replace(/\)/g, ') / arguments.length)');
+
+            try {
+                return eval(expression);
+            } catch (error) {
+                return '#ERREUR';
+            }
+        }
+
+        function calculateAll() {
+            const formulaCells = document.querySelectorAll('.cell[data-cell]');
+            formulaCells.forEach(cell => {
+                const value = cell.textContent;
+                if (value.startsWith('=')) {
+                    try {
+                        const result = evaluateFormula(value);
+                        if (result !== '#ERREUR') {
+                            cell.textContent = result.toLocaleString();
+                            cell.style.background = '#dcfce7';
+                        }
+                    } catch (error) {
+                        cell.textContent = '#ERREUR';
+                        cell.style.background = '#fee2e2';
+                    }
+                }
+            });
+            
+            showSuccess('Calculs effectués avec succès !');
+            updateExerciseProgress();
+        }
+
+        function insertChart() {
+            const chartContainer = document.getElementById('chartContainer');
+            chartContainer.style.display = 'block';
+
+            if (chart) {
+                chart.dispose();
+            }
+
+            chart = echarts.init(document.getElementById('expenseChart'));
+
+            // Préparer les données
+            const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin'];
+            const salaries = [];
+            const loyer = [];
+            const marketing = [];
+            const materiel = [];
+
+            for (let i = 2; i <= 6; i++) {
+                const monthCells = ['B', 'C', 'D', 'E', 'F', 'G'];
+                monthCells.forEach((col, index) => {
+                    if (i === 2) salaries.push(parseFloat(document.querySelector(`[data-cell="${col}${i}"]`).textContent.replace(/,/g, '')));
+                    if (i === 3) loyer.push(parseFloat(document.querySelector(`[data-cell="${col}${i}"]`).textContent.replace(/,/g, '')));
+                    if (i === 4) marketing.push(parseFloat(document.querySelector(`[data-cell="${col}${i}"]`).textContent.replace(/,/g, '')));
+                    if (i === 5) materiel.push(parseFloat(document.querySelector(`[data-cell="${col}${i}"]`).textContent.replace(/,/g, '')));
+                });
+            }
+
+            const option = {
+                title: {
+                    text: 'Dépenses mensuelles par catégorie',
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                legend: {
+                    data: ['Salaires', 'Loyer', 'Marketing', 'Matériel IT'],
+                    bottom: 10
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '15%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: months
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        formatter: '{value} €'
+                    }
+                },
+                series: [
+                    {
+                        name: 'Salaires',
+                        type: 'bar',
+                        data: salaries,
+                        itemStyle: { color: '#3b82f6' }
+                    },
+                    {
+                        name: 'Loyer',
+                        type: 'bar',
+                        data: loyer,
+                        itemStyle: { color: '#22c55e' }
+                    },
+                    {
+                        name: 'Marketing',
+                        type: 'bar',
+                        data: marketing,
+                        itemStyle: { color: '#f59e0b' }
+                    },
+                    {
+                        name: 'Matériel IT',
+                        type: 'bar',
+                        data: materiel,
+                        itemStyle: { color: '#ef4444' }
+                    }
+                ]
+            };
+
+            chart.setOption(option);
+            showSuccess('Graphique créé avec succès !');
+            updateExerciseProgress();
+        }
+
+        function updateExerciseProgress() {
+            const progressBar = document.getElementById('exercise-progress');
+            const formulasCheck = document.getElementById('formulas-check');
+            const chartCheck = document.getElementById('chart-check');
+            
+            let progress = 33; // Données saisies par défaut
+            
+            // Vérifier si les formules sont calculées
+            const formulaCells = document.querySelectorAll('.cell[data-cell][style*="background: rgb(220, 252, 231)"]');
+            if (formulaCells.length > 5) {
+                progress += 34;
+                formulasCheck.checked = true;
+            }
+            
+            // Vérifier si le graphique est créé
+            if (document.getElementById('chartContainer').style.display === 'block') {
+                progress += 33;
+                chartCheck.checked = true;
+            }
+            
+            progressBar.style.width = progress + '%';
+            progressBar.parentNode.querySelector('.text-xs').textContent = progress + '% complété';
+            
+            if (progress >= 100) {
+                showSuccess('Félicitations ! Vous avez terminé l\'exercice Excel.');
+            }
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 5000);
+        }
+
+        // Raccourcis clavier
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey) {
+                switch(e.key) {
+                    case 'Enter':
+                        e.preventDefault();
+                        calculateAll();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

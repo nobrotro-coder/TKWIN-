@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forum - TKWIN+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .text-body {
+            font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .forum-card {
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        .forum-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .topic-item {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .topic-item:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+        .topic-item.unread {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid #3b82f6;
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+        }
+        .sidebar-item.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+        .category-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .category-word {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+        .category-excel {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+        }
+        .category-powerpoint {
+            background: rgba(249, 115, 22, 0.1);
+            color: #f59e0b;
+        }
+        .category-general {
+            background: rgba(139, 92, 246, 0.1);
+            color: #8b5cf6;
+        }
+        .user-badge {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+        }
+        .user-admin {
+            background: #ef4444;
+        }
+        .user-prof {
+            background: #3b82f6;
+        }
+        .user-student {
+            background: #22c55e;
+        }
+        .post-content {
+            line-height: 1.6;
+        }
+        .post-content p {
+            margin-bottom: 12px;
+        }
+        .post-content ul, .post-content ol {
+            margin-bottom: 12px;
+            padding-left: 20px;
+        }
+        .post-content code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .post-content blockquote {
+            border-left: 4px solid #3b82f6;
+            padding-left: 16px;
+            margin: 16px 0;
+            font-style: italic;
+            color: #6b7280;
+        }
+        .reply-form {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .search-highlight {
+            background: rgba(249, 115, 22, 0.3);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        .notification-dot {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+        }
+        .topic-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .topic-modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .vote-button {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .vote-button:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .vote-button.upvoted {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+        }
+        .vote-button.downvoted {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed w-full top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <img src="resources/tkwin-logo.png" alt="TKWIN+" class="h-8 w-8 mr-3">
+                    <span class="text-xl font-bold text-blue-600">TKWIN+</span>
+                    <span class="ml-4 text-gray-600">Forum</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="createNewTopic()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        Nouveau sujet
+                    </button>
+                    <button onclick="window.location.href='dashboard.html'" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                        Retour au tableau de bord
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex pt-16">
+        <!-- Sidebar -->
+        <aside class="w-80 bg-white shadow-lg fixed left-0 top-16 bottom-0 z-30 overflow-y-auto">
+            <!-- Search Bar -->
+            <div class="p-4 border-b border-gray-200">
+                <div class="relative">
+                    <input type="text" placeholder="Rechercher dans le forum..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onkeyup="searchTopics(this.value)">
+                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div class="p-4">
+                <h3 class="text-sm font-semibold text-gray-500 mb-3">Catégories</h3>
+                <div class="space-y-2">
+                    <div class="sidebar-item active p-3 rounded-lg cursor-pointer" onclick="filterByCategory('all')">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-gray-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            <span class="font-medium text-gray-900">Tous les sujets</span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-item p-3 rounded-lg cursor-pointer" onclick="filterByCategory('word')">
+                        <div class="flex items-center">
+                            <span class="category-badge category-word mr-3">Word</span>
+                            <span class="font-medium text-gray-700">Microsoft Word</span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-item p-3 rounded-lg cursor-pointer" onclick="filterByCategory('excel')">
+                        <div class="flex items-center">
+                            <span class="category-badge category-excel mr-3">Excel</span>
+                            <span class="font-medium text-gray-700">Microsoft Excel</span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-item p-3 rounded-lg cursor-pointer" onclick="filterByCategory('powerpoint')">
+                        <div class="flex items-center">
+                            <span class="category-badge category-powerpoint mr-3">PowerPoint</span>
+                            <span class="font-medium text-gray-700">Microsoft PowerPoint</span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-item p-3 rounded-lg cursor-pointer" onclick="filterByCategory('general')">
+                        <div class="flex items-center">
+                            <span class="category-badge category-general mr-3">Général</span>
+                            <span class="font-medium text-gray-700">Discussions générales</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="p-4 border-t border-gray-200">
+                <h3 class="text-sm font-semibold text-gray-500 mb-3">Activité récente</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start">
+                        <div class="relative mr-3">
+                            <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=24&h=24&fit=crop&crop=face" alt="Utilisateur" class="w-6 h-6 rounded-full">
+                            <div class="notification-dot"></div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-gray-900 font-medium">M. Dupont</p>
+                            <p class="text-xs text-gray-600 truncate">a répondu à "Problème avec les styles Word"</p>
+                            <p class="text-xs text-gray-400">Il y a 2 heures</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="relative mr-3">
+                            <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=24&h=24&fit=crop&crop=face" alt="Utilisateur" class="w-6 h-6 rounded-full">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-gray-900 font-medium">Marie Laurent</p>
+                            <p class="text-xs text-gray-600 truncate">a créé un nouveau sujet "Formules Excel complexes"</p>
+                            <p class="text-xs text-gray-400">Hier</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="relative mr-3">
+                            <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=24&h=24&fit=crop&crop=face" alt="Utilisateur" class="w-6 h-6 rounded-full">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-gray-900 font-medium">Thomas Dubois</p>
+                            <p class="text-xs text-gray-600 truncate">a aimé "Astuce PowerPoint"</p>
+                            <p class="text-xs text-gray-400">2 jours</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 ml-80 p-6">
+            <!-- Page Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Forum de discussion</h1>
+                <p class="text-lg text-gray-600">Posez vos questions, partagez vos connaissances et interagissez avec la communauté</p>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div class="flex items-center space-x-4">
+                        <button onclick="filterTopics('all')" class="filter-btn active px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            Tous
+                        </button>
+                        <button onclick="filterTopics('unread')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            Non lus
+                        </button>
+                        <button onclick="filterTopics('popular')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            Populaires
+                        </button>
+                        <button onclick="filterTopics('recent')" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            Récents
+                        </button>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <select class="border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="sortTopics(this.value)">
+                            <option value="recent">Plus récents</option>
+                            <option value="popular">Plus populaires</option>
+                            <option value="replies">Plus de réponses</option>
+                            <option value="oldest">Plus anciens</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Topics List -->
+            <div class="space-y-4" id="topicsList">
+                <!-- Topic 1 -->
+                <div class="forum-card bg-white rounded-xl shadow-sm p-6 topic-item unread" data-category="word" onclick="openTopic('styles-word')">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="relative mr-4">
+                                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face" alt="Marie Laurent" class="w-10 h-10 rounded-full">
+                                <div class="user-badge user-student absolute -bottom-1 -right-1">S</div>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900 mb-1">Problème avec les styles Word</h3>
+                                <p class="text-sm text-gray-600 mb-2">
+                                    Je n'arrive pas à faire fonctionner les styles personnalisés dans mon document. Quelqu'un peut m'aider ?
+                                </p>
+                                <div class="flex items-center space-x-4">
+                                    <span class="category-badge category-word">Word</span>
+                                    <span class="text-xs text-gray-500">Marie Laurent</span>
+                                    <span class="text-xs text-gray-500">Il y a 2 heures</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500 mb-1">12 réponses</div>
+                            <div class="flex items-center space-x-2">
+                                <div class="vote-button upvoted">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="text-xs">15</span>
+                                </div>
+                                <div class="text-xs text-gray-500">👍 3</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4 text-sm text-gray-500">
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                234 vues
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                Dernière réponse: M. Dupont
+                            </span>
+                        </div>
+                        <div class="relative">
+                            <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Topic 2 -->
+                <div class="forum-card bg-white rounded-xl shadow-sm p-6 topic-item" data-category="excel" onclick="openTopic('formules-excel')">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="relative mr-4">
+                                <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="Thomas Dubois" class="w-10 h-10 rounded-full">
+                                <div class="user-badge user-student absolute -bottom-1 -right-1">S</div>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900 mb-1">Formules Excel complexes</h3>
+                                <p class="text-sm text-gray-600 mb-2">
+                                    Quelqu'un peut m'expliquer comment fonctionne la fonction RECHERCHEV avec plusieurs critères ?
+                                </p>
+                                <div class="flex items-center space-x-4">
+                                    <span class="category-badge category-excel">Excel</span>
+                                    <span class="text-xs text-gray-500">Thomas Dubois</span>
+                                    <span class="text-xs text-gray-500">Hier</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500 mb-1">8 réponses</div>
+                            <div class="flex items-center space-x-2">
+                                <div class="vote-button">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="text-xs">7</span>
+                                </div>
+                                <div class="text-xs text-gray-500">👍 1</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4 text-sm text-gray-500">
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                156 vues
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                Dernière réponse: Sophie Martin
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Topic 3 -->
+                <div class="forum-card bg-white rounded-xl shadow-sm p-6 topic-item" data-category="powerpoint" onclick="openTopic('animations-powerpoint')">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="relative mr-4">
+                                <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face" alt="Sophie Martin" class="w-10 h-10 rounded-full">
+                                <div class="user-badge user-student absolute -bottom-1 -right-1">S</div>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900 mb-1">Astuce PowerPoint : Animations fluides</h3>
+                                <p class="text-sm text-gray-600 mb-2">
+                                    Je partage une astuce pour créer des animations fluides et professionnelles dans PowerPoint.
+                                </p>
+                                <div class="flex items-center space-x-4">
+                                    <span class="category-badge category-powerpoint">PowerPoint</span>
+                                    <span class="text-xs text-gray-500">Sophie Martin</span>
+                                    <span class="text-xs text-gray-500">3 jours</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500 mb-1">15 réponses</div>
+                            <div class="flex items-center space-x-2">
+                                <div class="vote-button upvoted">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="text-xs">28</span>
+                                </div>
+                                <div class="text-xs text-gray-500">👍 12</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4 text-sm text-gray-500">
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                412 vues
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                Dernière réponse: M. Dupont
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Populaire</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Topic 4 -->
+                <div class="forum-card bg-white rounded-xl shadow-sm p-6 topic-item" data-category="general" onclick="openTopic('bienvenue-forum')">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="relative mr-4">
+                                <div class="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div class="user-badge user-admin absolute -bottom-1 -right-1">A</div>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900 mb-1">Bienvenue sur le forum TKWIN+ !</h3>
+                                <p class="text-sm text-gray-600 mb-2">
+                                    Bienvenue à tous ! Voici les règles et conseils pour utiliser notre forum.
+                                </p>
+                                <div class="flex items-center space-x-4">
+                                    <span class="category-badge category-general">Général</span>
+                                    <span class="text-xs text-gray-500">Admin</span>
+                                    <span class="text-xs text-gray-500">1 semaine</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500 mb-1">42 réponses</div>
+                            <div class="flex items-center space-x-2">
+                                <div class="vote-button upvoted">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="text-xs">89</span>
+                                </div>
+                                <div class="text-xs text-gray-500">👍 45</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4 text-sm text-gray-500">
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                1.2k vues
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                Dernière réponse: Admin
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Épinglé</span>
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Important</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Load More Button -->
+            <div class="text-center mt-8">
+                <button onclick="loadMoreTopics()" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                    Charger plus de sujets
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Topic Modal -->
+    <div class="topic-modal" id="topicModal">
+        <div class="modal-content">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-900" id="modalTitle">Titre du sujet</h2>
+                    <button onclick="closeTopicModal()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6" id="modalContent">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- New Topic Modal -->
+    <div class="topic-modal" id="newTopicModal">
+        <div class="modal-content">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-900">Nouveau sujet</h2>
+                    <button onclick="closeNewTopicModal()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <form onsubmit="createTopic(event)">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Catégorie</label>
+                        <select class="w-full border border-gray-300 rounded-lg px-3 py-2" id="topicCategory">
+                            <option value="word">Microsoft Word</option>
+                            <option value="excel">Microsoft Excel</option>
+                            <option value="powerpoint">Microsoft PowerPoint</option>
+                            <option value="general">Général</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Titre</label>
+                        <input type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="Titre de votre sujet" id="topicTitle" required>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Contenu</label>
+                        <textarea class="w-full border border-gray-300 rounded-lg px-3 py-2 h-32" placeholder="Décrivez votre question ou votre problème..." id="topicContent" required></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="closeNewTopicModal()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                            Annuler
+                        </button>
+                        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Publier
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentCategory = 'all';
+        let currentFilter = 'all';
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeForum();
+            
+            // Animation d'apparition
+            anime({
+                targets: '.forum-card',
+                opacity: [0, 1],
+                translateY: [20, 0],
+                delay: anime.stagger(100),
+                duration: 600,
+                easing: 'easeOutQuart'
+            });
+        });
+
+        function initializeForum() {
+            // Marquer les sujets non lus
+            document.querySelectorAll('.topic-item.unread').forEach(item => {
+                item.style.borderLeft = '4px solid #3b82f6';
+                item.style.background = 'rgba(59, 130, 246, 0.1)';
+            });
+        }
+
+        function filterByCategory(category) {
+            currentCategory = category;
+            
+            // Mettre à jour les onglets
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // Filtrer les sujets
+            filterTopics();
+        }
+
+        function filterTopics(filter = 'all') {
+            currentFilter = filter;
+            
+            // Mettre à jour les boutons de filtre
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target?.classList.add('active');
+            
+            const topics = document.querySelectorAll('.topic-item');
+            topics.forEach(topic => {
+                const category = topic.dataset.category;
+                let show = true;
+                
+                // Filtrer par catégorie
+                if (currentCategory !== 'all' && category !== currentCategory) {
+                    show = false;
+                }
+                
+                // Filtrer par type
+                if (filter === 'unread' && !topic.classList.contains('unread')) {
+                    show = false;
+                } else if (filter === 'popular' && !topic.querySelector('.bg-yellow-100')) {
+                    show = false;
+                }
+                
+                topic.style.display = show ? 'block' : 'none';
+            });
+        }
+
+        function sortTopics(sortBy) {
+            // Simulation du tri des sujets
+            showSuccess(`Tri par ${sortBy} appliqué`);
+        }
+
+        function searchTopics(query) {
+            const topics = document.querySelectorAll('.topic-item');
+            topics.forEach(topic => {
+                const title = topic.querySelector('h3').textContent.toLowerCase();
+                const content = topic.querySelector('p').textContent.toLowerCase();
+                const matches = title.includes(query.toLowerCase()) || content.includes(query.toLowerCase());
+                
+                if (matches || query === '') {
+                    topic.style.display = 'block';
+                    // Highlight search terms
+                    if (query) {
+                        highlightText(topic, query);
+                    } else {
+                        removeHighlight(topic);
+                    }
+                } else {
+                    topic.style.display = 'none';
+                }
+            });
+        }
+
+        function highlightText(element, query) {
+            const textNodes = getTextNodes(element);
+            textNodes.forEach(node => {
+                if (node.textContent.toLowerCase().includes(query.toLowerCase())) {
+                    const regex = new RegExp(`(${query})`, 'gi');
+                    const highlighted = node.textContent.replace(regex, '<span class="search-highlight">$1</span>');
+                    const wrapper = document.createElement('span');
+                    wrapper.innerHTML = highlighted;
+                    node.parentNode.replaceChild(wrapper, node);
+                }
+            });
+        }
+
+        function removeHighlight(element) {
+            const highlights = element.querySelectorAll('.search-highlight');
+            highlights.forEach(highlight => {
+                highlight.outerHTML = highlight.innerHTML;
+            });
+        }
+
+        function getTextNodes(element) {
+            const textNodes = [];
+            const walker = document.createTreeWalker(
+                element,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            let node;
+            while (node = walker.nextNode()) {
+                textNodes.push(node);
+            }
+            
+            return textNodes;
+        }
+
+        function openTopic(topicId) {
+            const modal = document.getElementById('topicModal');
+            const title = document.getElementById('modalTitle');
+            const content = document.getElementById('modalContent');
+            
+            // Données de sujet simulées
+            const topics = {
+                'styles-word': {
+                    title: 'Problème avec les styles Word',
+                    author: 'Marie Laurent',
+                    date: 'Il y a 2 heures',
+                    category: 'Word',
+                    content: `
+                        <div class="mb-6">
+                            <div class="flex items-center mb-4">
+                                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face" alt="Marie Laurent" class="w-10 h-10 rounded-full mr-3">
+                                <div>
+                                    <h4 class="font-semibold text-gray-900">Marie Laurent</h4>
+                                    <p class="text-sm text-gray-500">Étudiante • Il y a 2 heures</p>
+                                </div>
+                            </div>
+                            <div class="post-content text-gray-700 mb-4">
+                                <p>Bonjour à tous !</p>
+                                <p>J'ai un problème avec les styles dans Word. J'ai créé un style personnalisé pour mes titres mais il ne s'applique pas correctement. Quand je sélectionne mon texte et clique sur le style, rien ne se passe.</p>
+                                <p>J'ai essayé de modifier le style existant mais c'est pareil. Est-ce que quelqu'un a déjà eu ce problème ?</p>
+                                <p>Merci d'avance pour votre aide !</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="border-l-4 border-gray-200 pl-4">
+                                <div class="flex items-center mb-2">
+                                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face" alt="M. Dupont" class="w-8 h-8 rounded-full mr-2">
+                                    <div>
+                                        <h5 class="font-medium text-gray-900">M. Dupont</h5>
+                                        <p class="text-xs text-gray-500">Professeur • Il y a 1 heure</p>
+                                    </div>
+                                </div>
+                                <div class="text-gray-700 text-sm">
+                                    <p>Bonjour Marie !</p>
+                                    <p>Pour que les styles fonctionnent correctement, assurez-vous que :</p>
+                                    <ul>
+                                        <li>Le texte est bien sélectionné avant d'appliquer le style</li>
+                                        <li>Le style n'est pas verrouillé ou protégé</li>
+                                        <li>Vous utilisez bien l'onglet "Accueil" puis "Styles"</li>
+                                    </ul>
+                                    <p>Si le problème persiste, vous pouvez me montrer votre document lors du prochain cours.</p>
+                                </div>
+                                <div class="flex items-center space-x-4 mt-2">
+                                    <button class="vote-button upvoted text-xs">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>5</span>
+                                    </button>
+                                    <button class="text-xs text-gray-500 hover:text-blue-600">Répondre</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="reply-form">
+                            <h6 class="font-medium text-gray-900 mb-2">Répondre à ce sujet</h6>
+                            <textarea class="w-full border border-gray-300 rounded-lg px-3 py-2 h-20 resize-none" placeholder="Votre réponse..."></textarea>
+                            <div class="flex justify-end mt-3">
+                                <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                                    Publier la réponse
+                                </button>
+                            </div>
+                        </div>
+                    `
+                },
+                'formules-excel': {
+                    title: 'Formules Excel complexes',
+                    author: 'Thomas Dubois',
+                    date: 'Hier',
+                    category: 'Excel',
+                    content: `
+                        <div class="mb-6">
+                            <div class="flex items-center mb-4">
+                                <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="Thomas Dubois" class="w-10 h-10 rounded-full mr-3">
+                                <div>
+                                    <h4 class="font-semibold text-gray-900">Thomas Dubois</h4>
+                                    <p class="text-sm text-gray-500">Étudiant • Hier</p>
+                                </div>
+                            </div>
+                            <div class="post-content text-gray-700 mb-4">
+                                <p>Bonjour,</p>
+                                <p>J'essaie d'utiliser la fonction RECHERCHEV avec plusieurs critères mais je n'y arrive pas. J'ai deux colonnes :</p>
+                                <ul>
+                                    <li>Colonne A : Noms</li>
+                                    <li>Colonne B : Dates</li>
+                                </ul>
+                                <p>Je veux trouver une valeur qui correspond à un nom ET une date spécifique. Comment faire ?</p>
+                                <p>Merci !</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="border-l-4 border-gray-200 pl-4">
+                                <div class="flex items-center mb-2">
+                                    <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=32&h=32&fit=crop&crop=face" alt="Sophie Martin" class="w-8 h-8 rounded-full mr-2">
+                                    <div>
+                                        <h5 class="font-medium text-gray-900">Sophie Martin</h5>
+                                        <p class="text-xs text-gray-500">Étudiante • Hier</p>
+                                    </div>
+                                </div>
+                                <div class="text-gray-700 text-sm">
+                                    <p>Salut Thomas !</p>
+                                    <p>Pour plusieurs critères avec RECHERCHEV, tu peux utiliser INDEX et EQUIV combinés :</p>
+                                    <code>=INDEX(C:C;EQUIV(1;(A:A=nom)*(B:B=date);0))</code>
+                                    <p>Valide avec Ctrl+Maj+Entrée pour que ce soit un tableau.</p>
+                                </div>
+                                <div class="flex items-center space-x-4 mt-2">
+                                    <button class="vote-button upvoted text-xs">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>3</span>
+                                    </button>
+                                    <button class="text-xs text-gray-500 hover:text-blue-600">Répondre</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="reply-form">
+                            <h6 class="font-medium text-gray-900 mb-2">Répondre à ce sujet</h6>
+                            <textarea class="w-full border border-gray-300 rounded-lg px-3 py-2 h-20 resize-none" placeholder="Votre réponse..."></textarea>
+                            <div class="flex justify-end mt-3">
+                                <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                                    Publier la réponse
+                                </button>
+                            </div>
+                        </div>
+                    `
+                }
+            };
+            
+            const topic = topics[topicId];
+            if (topic) {
+                title.textContent = topic.title;
+                content.innerHTML = topic.content;
+                modal.classList.add('active');
+            }
+        }
+
+        function closeTopicModal() {
+            document.getElementById('topicModal').classList.remove('active');
+        }
+
+        function createNewTopic() {
+            document.getElementById('newTopicModal').classList.add('active');
+        }
+
+        function closeNewTopicModal() {
+            document.getElementById('newTopicModal').classList.remove('active');
+        }
+
+        function createTopic(event) {
+            event.preventDefault();
+            
+            const category = document.getElementById('topicCategory').value;
+            const title = document.getElementById('topicTitle').value;
+            const content = document.getElementById('topicContent').value;
+            
+            if (!title || !content) {
+                showError('Veuillez remplir tous les champs obligatoires.');
+                return;
+            }
+            
+            showSuccess('Sujet créé avec succès !');
+            closeNewTopicModal();
+            
+            // Réinitialiser le formulaire
+            document.getElementById('topicTitle').value = '';
+            document.getElementById('topicContent').value = '';
+        }
+
+        function loadMoreTopics() {
+            showSuccess('Chargement de plus de sujets... (Simulation)');
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            errorDiv.textContent = message;
+            document.body.appendChild(errorDiv);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 3000);
+        }
+
+        // Fermer les modals en cliquant en dehors
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('topic-modal')) {
+                closeTopicModal();
+                closeNewTopicModal();
+            }
+        });
+
+        // Échap pour fermer les modals
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeTopicModal();
+                closeNewTopicModal();
+            }
+        });
+    </script>
+</body>
+</html>

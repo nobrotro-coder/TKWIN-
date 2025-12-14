@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur Microsoft Word - TKWIN+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .text-body {
+            font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .word-ribbon {
+            background: linear-gradient(to bottom, #f3f3f3 0%, #e9e9e9 100%);
+            border-bottom: 1px solid #d4d4d4;
+        }
+        .ribbon-tab {
+            padding: 8px 16px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ribbon-tab:hover {
+            background: rgba(255, 255, 255, 0.7);
+            border-color: #d4d4d4;
+        }
+        .ribbon-tab.active {
+            background: white;
+            border-color: #d4d4d4;
+            border-bottom-color: white;
+            margin-bottom: -1px;
+        }
+        .ribbon-button {
+            padding: 6px 12px;
+            border: 1px solid transparent;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+        }
+        .ribbon-button:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+        }
+        .ribbon-button.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+        }
+        .document-area {
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin: 20px auto;
+            padding: 40px;
+            max-width: 800px;
+            min-height: 600px;
+            border: 1px solid #d4d4d4;
+        }
+        .document-content {
+            font-family: 'Source Sans Pro', serif;
+            line-height: 1.6;
+            font-size: 12pt;
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+        }
+        .sidebar-item.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+        .exercise-panel {
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+        }
+        .tooltip {
+            position: absolute;
+            background: #1f2937;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .formatting-toolbar {
+            background: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 16px;
+        }
+        .font-selector {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 14px;
+            min-width: 120px;
+        }
+        .font-size-selector {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 14px;
+            min-width: 60px;
+        }
+        .toolbar-button {
+            padding: 6px 8px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .toolbar-button:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+        }
+        .toolbar-button.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900">
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed w-full top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <img src="resources/tkwin-logo.png" alt="TKWIN+" class="h-8 w-8 mr-3">
+                    <span class="text-xl font-bold text-blue-600">TKWIN+</span>
+                    <span class="ml-4 text-gray-600">Simulateur Microsoft Word</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="saveDocument()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                        Enregistrer
+                    </button>
+                    <button onclick="window.location.href='dashboard.html'" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                        Retour au tableau de bord
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex pt-16">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white shadow-lg fixed left-0 top-16 bottom-0 z-30 overflow-y-auto">
+            <nav class="p-4 space-y-2">
+                <div class="sidebar-item p-3 cursor-pointer" onclick="window.location.href='dashboard.html'">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-gray-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+                        </svg>
+                        <span class="font-medium text-gray-700">Tableau de bord</span>
+                    </div>
+                </div>
+                
+                <div class="sidebar-item active p-3 cursor-pointer">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span class="font-medium text-gray-900">Word</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-item p-3 cursor-pointer" onclick="window.location.href='simulateur-excel.html'">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span class="font-medium text-gray-700">Excel</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-item p-3 cursor-pointer" onclick="window.location.href='simulateur-powerpoint.html'">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-orange-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h4a1 1 0 110 2h-1v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6H3a1 1 0 110-2h4z" />
+                        </svg>
+                        <span class="font-medium text-gray-700">PowerPoint</span>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Exercise Panel -->
+            <div class="exercise-panel p-4 m-4 rounded-lg">
+                <h4 class="font-semibold text-gray-900 mb-3">Exercice en cours</h4>
+                <div class="space-y-3">
+                    <div class="text-sm text-gray-700">
+                        <strong>Objectif:</strong> Créer une lettre professionnelle avec mise en forme avancée
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center text-sm">
+                            <input type="checkbox" checked disabled class="mr-2">
+                            <span class="text-green-600">Titre formaté</span>
+                        </div>
+                        <div class="flex items-center text-sm">
+                            <input type="checkbox" checked disabled class="mr-2">
+                            <span class="text-green-600">Paragraphes alignés</span>
+                        </div>
+                        <div class="flex items-center text-sm">
+                            <input type="checkbox" class="mr-2">
+                            <span class="text-gray-600">Liste à puces ajoutée</span>
+                        </div>
+                        <div class="flex items-center text-sm">
+                            <input type="checkbox" class="mr-2">
+                            <span class="text-gray-600">Image insérée</span>
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <div class="text-xs text-gray-600 mb-1">Progression</div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: 50%"></div>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-1">50% complété</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 ml-64 p-6">
+            <!-- Ribbon Interface -->
+            <div class="word-ribbon rounded-lg mb-6">
+                <!-- Tabs -->
+                <div class="flex border-b border-gray-300 px-4 pt-2">
+                    <div class="ribbon-tab active" data-tab="home">
+                        <span class="font-medium">Accueil</span>
+                    </div>
+                    <div class="ribbon-tab" data-tab="insert">
+                        <span class="font-medium">Insertion</span>
+                    </div>
+                    <div class="ribbon-tab" data-tab="layout">
+                        <span class="font-medium">Mise en page</span>
+                    </div>
+                    <div class="ribbon-tab" data-tab="references">
+                        <span class="font-medium">Références</span>
+                    </div>
+                    <div class="ribbon-tab" data-tab="mailings">
+                        <span class="font-medium">Courrier</span>
+                    </div>
+                    <div class="ribbon-tab" data-tab="review">
+                        <span class="font-medium">Révision</span>
+                    </div>
+                    <div class="ribbon-tab" data-tab="view">
+                        <span class="font-medium">Affichage</span>
+                    </div>
+                </div>
+
+                <!-- Home Tab Content -->
+                <div id="home-tab" class="ribbon-content p-4">
+                    <div class="flex items-center space-x-6">
+                        <!-- Clipboard Group -->
+                        <div class="flex items-center space-x-2 border-r border-gray-300 pr-4">
+                            <div class="ribbon-button" data-tooltip="Couper">
+                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 7l-5 5 5 5" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 7l5 5-5 5" />
+                                </svg>
+                                <span class="text-xs">Couper</span>
+                            </div>
+                            <div class="ribbon-button" data-tooltip="Copier">
+                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                <span class="text-xs">Copier</span>
+                            </div>
+                            <div class="ribbon-button" data-tooltip="Coller">
+                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                <span class="text-xs">Coller</span>
+                            </div>
+                        </div>
+
+                        <!-- Font Group -->
+                        <div class="flex items-center space-x-2 border-r border-gray-300 pr-4">
+                            <select class="font-selector" id="fontFamily">
+                                <option value="Source Sans Pro">Source Sans Pro</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Calibri">Calibri</option>
+                            </select>
+                            <select class="font-size-selector" id="fontSize">
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12" selected>12</option>
+                                <option value="14">14</option>
+                                <option value="16">16</option>
+                                <option value="18">18</option>
+                                <option value="20">20</option>
+                                <option value="24">24</option>
+                            </select>
+                        </div>
+
+                        <!-- Formatting Group -->
+                        <div class="flex items-center space-x-2 border-r border-gray-300 pr-4">
+                            <div class="ribbon-button" data-tooltip="Gras" onclick="toggleFormat('bold')">
+                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z" />
+                                </svg>
+                                <span class="text-xs">Gras</span>
+                            </div>
+                            <div class="ribbon-button" data-tooltip="Italique" onclick="toggleFormat('italic')">
+                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 4l4 16" />
+                                </svg>
+                                <span class="text-xs">Italique</span>
+                            </div>
+                            <div class="ribbon-button" data-tooltip="Souligné" onclick="toggleFormat('underline')">
+                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                </svg>
+                                <span class="text-xs">Souligné</span>
+                            </div>
+                        </div>
+
+                        <!-- Paragraph Group -->
+                        <div class="flex items-center space-x-2">
+                            <div class="ribbon-button" data-tooltip="Liste à puces" onclick="insertList()">
+                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                </svg>
+                                <span class="text-xs">Puces</span>
+                            </div>
+                            <div class="ribbon-button" data-tooltip="Aligner à gauche" onclick="alignText('left')">
+                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h10M4 14h16M4 18h10" />
+                                </svg>
+                                <span class="text-xs">Aligner</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Area -->
+            <div class="document-area">
+                <!-- Formatting Toolbar -->
+                <div class="formatting-toolbar">
+                    <div class="flex items-center space-x-4">
+                        <select class="font-selector" id="currentFont" onchange="updateFont()">
+                            <option value="Source Sans Pro">Source Sans Pro</option>
+                            <option value="Arial">Arial</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Calibri">Calibri</option>
+                        </select>
+                        <select class="font-size-selector" id="currentSize" onchange="updateSize()">
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12" selected>12</option>
+                            <option value="14">14</option>
+                            <option value="16">16</option>
+                            <option value="18">18</option>
+                            <option value="20">20</option>
+                            <option value="24">24</option>
+                        </select>
+                        <div class="flex space-x-2">
+                            <button class="toolbar-button" onclick="formatDoc('bold')">
+                                <strong>B</strong>
+                            </button>
+                            <button class="toolbar-button" onclick="formatDoc('italic')">
+                                <em>I</em>
+                            </button>
+                            <button class="toolbar-button" onclick="formatDoc('underline')">
+                                <u>U</u>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Document Content -->
+                <div class="document-content" contenteditable="true" id="document">
+                    <h1 style="text-align: center; color: #1f2937; font-size: 24pt; margin-bottom: 24px;">
+                        <strong>Lettre Professionnelle</strong>
+                    </h1>
+                    
+                    <p style="margin-bottom: 16px;">
+                        <strong>Entreprise XYZ</strong><br>
+                        123 Rue de l'Innovation<br>
+                        75001 Paris<br>
+                        Tél: 01 23 45 67 89
+                    </p>
+
+                    <p style="margin-bottom: 16px; text-align: right;">
+                        Paris, le <span id="currentDate"></span>
+                    </p>
+
+                    <p style="margin-bottom: 16px;">
+                        <strong>Objet:</strong> Candidature au poste de Chef de Projet Digital
+                    </p>
+
+                    <p style="margin-bottom: 16px;">
+                        Madame, Monsieur,
+                    </p>
+
+                    <p style="margin-bottom: 16px; text-align: justify;">
+                        C'est avec un grand intérêt que je vous adresse ma candidature pour le poste de Chef de Projet Digital au sein de votre entreprise. 
+                        Fort d'une expérience de cinq ans dans la gestion de projets technologiques, je suis convaincu de pouvoir apporter une réelle valeur ajoutée à vos équipes.
+                    </p>
+
+                    <p style="margin-bottom: 16px; text-align: justify;">
+                        Mes compétences techniques incluent:
+                    </p>
+
+                    <ul style="margin-bottom: 16px; padding-left: 20px;">
+                        <li>Gestion de projets en méthodologie Agile et Scrum</li>
+                        <li>Maîtrise des outils de gestion de projet (Jira, Trello, Microsoft Project)</li>
+                        <li>Connaissance approfondie des technologies web et mobile</li>
+                        <li>Leadership d'équipe et gestion des parties prenantes</li>
+                    </ul>
+
+                    <p style="margin-bottom: 16px; text-align: justify;">
+                        Je serais ravi de pouvoir échanger avec vous sur la manière dont mon expérience et mes compétences pourraient contribuer au succès de vos projets.
+                    </p>
+
+                    <p style="margin-bottom: 16px;">
+                        Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.
+                    </p>
+
+                    <p style="margin-bottom: 16px;">
+                        <strong>Jean Dupont</strong>
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <script>
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Date actuelle
+            const today = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').textContent = today.toLocaleDateString('fr-FR', options);
+
+            // Gestion des onglets
+            const tabs = document.querySelectorAll('.ribbon-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Gestion des tooltips
+            const tooltipButtons = document.querySelectorAll('[data-tooltip]');
+            const tooltip = document.getElementById('tooltip');
+            
+            tooltipButtons.forEach(button => {
+                button.addEventListener('mouseenter', function(e) {
+                    tooltip.textContent = this.dataset.tooltip;
+                    tooltip.style.opacity = '1';
+                    updateTooltipPosition(e);
+                });
+
+                button.addEventListener('mouseleave', function() {
+                    tooltip.style.opacity = '0';
+                });
+
+                button.addEventListener('mousemove', updateTooltipPosition);
+            });
+
+            function updateTooltipPosition(e) {
+                tooltip.style.left = e.pageX + 10 + 'px';
+                tooltip.style.top = e.pageY - 30 + 'px';
+            }
+
+            // Animation d'apparition
+            anime({
+                targets: '.document-area',
+                opacity: [0, 1],
+                translateY: [20, 0],
+                duration: 800,
+                easing: 'easeOutQuart'
+            });
+        });
+
+        // Fonctions de formatage
+        function formatDoc(command) {
+            document.execCommand(command, false, null);
+            updateExerciseProgress();
+        }
+
+        function toggleFormat(format) {
+            document.execCommand(format, false, null);
+            updateExerciseProgress();
+        }
+
+        function alignText(alignment) {
+            document.execCommand('justify' + alignment, false, null);
+            updateExerciseProgress();
+        }
+
+        function insertList() {
+            document.execCommand('insertUnorderedList', false, null);
+            updateExerciseProgress();
+        }
+
+        function updateFont() {
+            const font = document.getElementById('currentFont').value;
+            document.execCommand('fontName', false, font);
+        }
+
+        function updateSize() {
+            const size = document.getElementById('currentSize').value;
+            document.execCommand('fontSize', false, size);
+        }
+
+        // Fonction pour mettre à jour la progression de l'exercice
+        function updateExerciseProgress() {
+            const document = document.getElementById('document');
+            const content = document.innerHTML;
+            let progress = 0;
+
+            // Vérifier si le titre est en gras
+            if (content.includes('<strong>')) {
+                progress += 25;
+            }
+
+            // Vérifier s'il y a une liste
+            if (content.includes('<ul>') || content.includes('<ol>')) {
+                progress += 25;
+            }
+
+            // Vérifier s'il y a une image
+            if (content.includes('<img')) {
+                progress += 25;
+            }
+
+            // Vérifier l'alignement
+            if (content.includes('text-align:')) {
+                progress += 25;
+            }
+
+            // Mettre à jour la barre de progression
+            const progressBar = document.querySelector('.bg-blue-600');
+            if (progressBar) {
+                progressBar.style.width = progress + '%';
+                const progressText = progressBar.parentNode.parentNode.querySelector('.text-xs');
+                if (progressText) {
+                    progressText.textContent = progress + '% complété';
+                }
+            }
+
+            // Cocher les cases si les objectifs sont atteints
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            if (progress >= 50) {
+                checkboxes[0].checked = true;
+                checkboxes[1].checked = true;
+            }
+            if (progress >= 75) {
+                checkboxes[2].checked = true;
+            }
+            if (progress >= 100) {
+                checkboxes[3].checked = true;
+                showSuccess('Félicitations ! Vous avez terminé l\'exercice.');
+            }
+        }
+
+        // Fonction pour enregistrer le document
+        function saveDocument() {
+            const content = document.getElementById('document').innerHTML;
+            const blob = new Blob([content], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'document_word.html';
+            a.click();
+            URL.revokeObjectURL(url);
+            showSuccess('Document enregistré avec succès !');
+        }
+
+        // Fonction pour afficher un message de succès
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 5000);
+        }
+
+        // Fonction pour insérer une image
+        function insertImage() {
+            const imageUrl = prompt('Entrez l\'URL de l\'image:');
+            if (imageUrl) {
+                document.execCommand('insertImage', false, imageUrl);
+                updateExerciseProgress();
+            }
+        }
+
+        // Raccourcis clavier
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey) {
+                switch(e.key) {
+                    case 'b':
+                        e.preventDefault();
+                        formatDoc('bold');
+                        break;
+                    case 'i':
+                        e.preventDefault();
+                        formatDoc('italic');
+                        break;
+                    case 'u':
+                        e.preventDefault();
+                        formatDoc('underline');
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        saveDocument();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

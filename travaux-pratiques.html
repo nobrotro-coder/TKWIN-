@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travaux Pratiques - TKWIN+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .text-body {
+            font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .tp-card {
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        .tp-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-en-cours {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+        .status-termine {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+        }
+        .status-a-rendre {
+            background: rgba(249, 115, 22, 0.1);
+            color: #f59e0b;
+        }
+        .status-corrigé {
+            background: rgba(139, 92, 246, 0.1);
+            color: #8b5cf6;
+        }
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        .progress-ring-circle {
+            stroke-dasharray: 251.2;
+            stroke-dashoffset: 251.2;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+        }
+        .sidebar-item.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+        .file-upload-zone {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .file-upload-zone:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+        .file-upload-zone.dragover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .correction-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .correction-modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .grade-display {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: bold;
+            color: white;
+        }
+        .grade-a {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        }
+        .grade-b {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+        .grade-c {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        .grade-d {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        .timeline-item {
+            position: relative;
+            padding-left: 32px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            width: 8px;
+            height: 8px;
+            background: #3b82f6;
+            border-radius: 50%;
+        }
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 16px;
+            width: 2px;
+            height: calc(100% - 8px);
+            background: #e5e7eb;
+        }
+        .timeline-item:last-child::after {
+            display: none;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed w-full top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <img src="resources/tkwin-logo.png" alt="TKWIN+" class="h-8 w-8 mr-3">
+                    <span class="text-xl font-bold text-blue-600">TKWIN+</span>
+                    <span class="ml-4 text-gray-600">Travaux Pratiques</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="createNewTP()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        Nouveau TP
+                    </button>
+                    <button onclick="window.location.href='dashboard.html'" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                        Retour au tableau de bord
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex pt-16">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white shadow-lg fixed left-0 top-16 bottom-0 z-30 overflow-y-auto">
+            <nav class="p-4 space-y-2">
+                <div class="sidebar-item p-3 cursor-pointer" onclick="window.location.href='dashboard.html'">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-gray-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+                        </svg>
+                        <span class="font-medium text-gray-700">Tableau de bord</span>
+                    </div>
+                </div>
+                
+                <div class="sidebar-item p-3 cursor-pointer" onclick="window.location.href='cours.html'">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        <span class="font-medium text-gray-700">Mes Cours</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-item active p-3 cursor-pointer">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-purple-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                        <span class="font-medium text-gray-900">Travaux Pratiques</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-item p-3 cursor-pointer" onclick="window.location.href='messagerie.html'">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        <span class="font-medium text-gray-700">Messagerie</span>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Quick Stats -->
+            <div class="p-4 border-t border-gray-200">
+                <h4 class="font-semibold text-gray-900 mb-3">Statistiques</h4>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">En cours</span>
+                        <span class="text-sm font-medium text-blue-600">3</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">Soumis</span>
+                        <span class="text-sm font-medium text-green-600">8</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">Corrigés</span>
+                        <span class="text-sm font-medium text-purple-600">6</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">Moyenne</span>
+                        <span class="text-sm font-medium text-orange-600">16.5/20</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 ml-64 p-6">
+            <!-- Page Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Travaux Pratiques</h1>
+                <p class="text-lg text-gray-600">Gérez vos exercices pratiques et suivez vos progrès</p>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="stats-card rounded-xl p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-80">TP en cours</p>
+                            <p class="text-3xl font-bold">3</p>
+                        </div>
+                        <svg class="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Soumis cette semaine</p>
+                            <p class="text-3xl font-bold text-green-600">2</p>
+                        </div>
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Corrigés récemment</p>
+                            <p class="text-3xl font-bold text-purple-600">4</p>
+                        </div>
+                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Moyenne générale</p>
+                            <p class="text-3xl font-bold text-orange-600">16.5/20</p>
+                        </div>
+                        <div class="relative w-16 h-16">
+                            <svg class="progress-ring w-16 h-16" viewBox="0 0 84 84">
+                                <circle class="progress-ring-circle" stroke="#f59e0b" stroke-width="4" fill="transparent" r="40" cx="42" cy="42" style="stroke-dashoffset: 75.36;"/>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="text-sm font-bold text-orange-600">82.5%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+                <div class="flex space-x-4">
+                    <button onclick="filterTP('all')" class="filter-tab active px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Tous les TP
+                    </button>
+                    <button onclick="filterTP('en-cours')" class="filter-tab px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        En cours
+                    </button>
+                    <button onclick="filterTP('a-rendre')" class="filter-tab px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        À rendre
+                    </button>
+                    <button onclick="filterTP('corriges')" class="filter-tab px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Corrigés
+                    </button>
+                </div>
+            </div>
+
+            <!-- TP Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6" id="tpGrid">
+                <!-- TP Card 1 -->
+                <div class="tp-card bg-white rounded-xl shadow-sm p-6" data-status="a-rendre">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900">Rapport de stage</h3>
+                                <p class="text-sm text-gray-600">Word Avancé</p>
+                            </div>
+                        </div>
+                        <span class="status-badge status-a-rendre">À rendre</span>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        Créez un rapport professionnel de 15 pages avec table des matières automatique et styles personnalisés.
+                    </p>
+                    <div class="space-y-3 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Date limite:</span>
+                            <span class="text-red-600 font-medium">15 déc. 2024</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Progression:</span>
+                            <span class="text-blue-600 font-medium">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="startTP('rapport-stage')" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                            Commencer
+                        </button>
+                        <button onclick="viewDetails('rapport-stage')" class="bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                            Détails
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TP Card 2 -->
+                <div class="tp-card bg-white rounded-xl shadow-sm p-6" data-status="en-cours">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900">Analyse financière</h3>
+                                <p class="text-sm text-gray-600">Excel Intermédiaire</p>
+                            </div>
+                        </div>
+                        <span class="status-badge status-en-cours">En cours</span>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        Analysez les données financières d'une entreprise avec tableaux croisés dynamiques et graphiques.
+                    </p>
+                    <div class="space-y-3 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Date limite:</span>
+                            <span class="text-orange-600 font-medium">10 déc. 2024</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Progression:</span>
+                            <span class="text-blue-600 font-medium">65%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: 65%"></div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="continueTP('analyse-financiere')" class="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors text-sm">
+                            Continuer
+                        </button>
+                        <button onclick="viewDetails('analyse-financiere')" class="bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                            Détails
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TP Card 3 -->
+                <div class="tp-card bg-white rounded-xl shadow-sm p-6" data-status="corriges">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h4a1 1 0 110 2h-1v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6H3a1 1 0 110-2h4z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900">Présentation commerciale</h3>
+                                <p class="text-sm text-gray-600">PowerPoint</p>
+                            </div>
+                        </div>
+                        <span class="status-badge status-corrigé">Corrigé</span>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        Créez une présentation commerciale persuasive avec animations et design professionnel.
+                    </p>
+                    <div class="space-y-3 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Note:</span>
+                            <span class="text-green-600 font-bold">18/20</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Corrigé le:</span>
+                            <span class="text-gray-600">28 nov. 2024</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Commentaire:</span>
+                            <span class="text-purple-600 font-medium">Excellent travail !</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="viewCorrection('presentation-commerciale')" class="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors text-sm">
+                            Voir correction
+                        </button>
+                        <button onclick="downloadTP('presentation-commerciale')" class="bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                            Télécharger
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TP Card 4 -->
+                <div class="tp-card bg-white rounded-xl shadow-sm p-6" data-status="corriges">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900">Lettre administrative</h3>
+                                <p class="text-sm text-gray-600">Word</p>
+                            </div>
+                        </div>
+                        <span class="status-badge status-corrigé">Corrigé</span>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        Rédigez une lettre administrative professionnelle avec mise en forme avancée.
+                    </p>
+                    <div class="space-y-3 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Note:</span>
+                            <span class="text-green-600 font-bold">17/20</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Corrigé le:</span>
+                            <span class="text-gray-600">22 nov. 2024</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Commentaire:</span>
+                            <span class="text-purple-600 font-medium">Très bon travail</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="viewCorrection('lettre-administrative')" class="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors text-sm">
+                            Voir correction
+                        </button>
+                        <button onclick="downloadTP('lettre-administrative')" class="bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                            Télécharger
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TP Card 5 -->
+                <div class="tp-card bg-white rounded-xl shadow-sm p-6" data-status="corriges">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900">Tableau de bord</h3>
+                                <p class="text-sm text-gray-600">Excel</p>
+                            </div>
+                        </div>
+                        <span class="status-badge status-corrigé">Corrigé</span>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        Créez un tableau de bord interactif avec graphiques et analyse de données.
+                    </p>
+                    <div class="space-y-3 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Note:</span>
+                            <span class="text-green-600 font-bold">19/20</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Corrigé le:</span>
+                            <span class="text-gray-600">15 nov. 2024</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Commentaire:</span>
+                            <span class="text-purple-600 font-medium">Travail remarquable !</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="viewCorrection('tableau-bord')" class="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors text-sm">
+                            Voir correction
+                        </button>
+                        <button onclick="downloadTP('tableau-bord')" class="bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                            Télécharger
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TP Card 6 -->
+                <div class="tp-card bg-white rounded-xl shadow-sm p-6" data-status="a-rendre">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h4a1 1 0 110 2h-1v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6H3a1 1 0 110-2h4z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900">Présentation marketing</h3>
+                                <p class="text-sm text-gray-600">PowerPoint</p>
+                            </div>
+                        </div>
+                        <span class="status-badge status-a-rendre">À rendre</span>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        Concevez une présentation marketing complète avec animations et transitions professionnelles.
+                    </p>
+                    <div class="space-y-3 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Date limite:</span>
+                            <span class="text-red-600 font-medium">20 déc. 2024</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Progression:</span>
+                            <span class="text-blue-600 font-medium">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="startTP('presentation-marketing')" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                            Commencer
+                        </button>
+                        <button onclick="viewDetails('presentation-marketing')" class="bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                            Détails
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Correction Modal -->
+    <div class="correction-modal" id="correctionModal">
+        <div class="modal-content">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-900">Correction du TP</h2>
+                    <button onclick="closeCorrectionModal()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6" id="correctionContent">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTP();
+            
+            // Animation d'apparition
+            anime({
+                targets: '.tp-card',
+                opacity: [0, 1],
+                translateY: [20, 0],
+                delay: anime.stagger(100),
+                duration: 600,
+                easing: 'easeOutQuart'
+            });
+        });
+
+        function initializeTP() {
+            // Initialiser les filtres
+            filterTP('all');
+        }
+
+        function filterTP(status) {
+            const cards = document.querySelectorAll('.tp-card');
+            const tabs = document.querySelectorAll('.filter-tab');
+            
+            // Mettre à jour les onglets actifs
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Filtrer les cartes
+            cards.forEach(card => {
+                if (status === 'all') {
+                    card.style.display = 'block';
+                } else {
+                    const cardStatus = card.dataset.status;
+                    card.style.display = cardStatus === status ? 'block' : 'none';
+                }
+            });
+        }
+
+        function startTP(tpId) {
+            showSuccess(`Démarrage du TP ${tpId}...`);
+            // Redirection vers le simulateur approprié
+            setTimeout(() => {
+                if (tpId.includes('word') || tpId.includes('rapport') || tpId.includes('lettre')) {
+                    window.location.href = 'simulateur-word.html';
+                } else if (tpId.includes('excel') || tpId.includes('analyse') || tpId.includes('tableau')) {
+                    window.location.href = 'simulateur-excel.html';
+                } else if (tpId.includes('powerpoint') || tpId.includes('presentation')) {
+                    window.location.href = 'simulateur-powerpoint.html';
+                }
+            }, 1000);
+        }
+
+        function continueTP(tpId) {
+            showSuccess(`Reprise du TP ${tpId}...`);
+            startTP(tpId);
+        }
+
+        function viewDetails(tpId) {
+            showSuccess(`Affichage des détails du TP ${tpId} (Simulation)`);
+        }
+
+        function viewCorrection(tpId) {
+            const modal = document.getElementById('correctionModal');
+            const content = document.getElementById('correctionContent');
+            
+            // Données de correction simulées
+            const corrections = {
+                'presentation-commerciale': {
+                    title: 'Présentation commerciale',
+                    grade: 18,
+                    maxGrade: 20,
+                    comment: 'Excellent travail ! Votre présentation est bien structurée et les animations sont pertinentes.',
+                    details: [
+                        { criterion: 'Structure de la présentation', grade: 5, max: 5, comment: 'Parfait, très logique' },
+                        { criterion: 'Qualité du design', grade: 4, max: 5, comment: 'Belle mise en page, améliorer la cohérence des couleurs' },
+                        { criterion: 'Utilisation des animations', grade: 5, max: 5, comment: 'Animations bien utilisées et professionnelles' },
+                        { criterion: 'Contenu et message', grade: 4, max: 5, comment: 'Message clair, quelques fautes à corriger' }
+                    ]
+                },
+                'lettre-administrative': {
+                    title: 'Lettre administrative',
+                    grade: 17,
+                    maxGrade: 20,
+                    comment: 'Très bon travail ! La mise en forme est professionnelle.',
+                    details: [
+                        { criterion: 'Respect de la structure', grade: 5, max: 5, comment: 'Structure administrative parfaite' },
+                        { criterion: 'Mise en forme', grade: 4, max: 5, comment: 'Bonne mise en forme, espaces à ajuster' },
+                        { criterion: 'Langage professionnel', grade: 4, max: 5, comment: 'Langage approprié, attention à quelques formulations' },
+                        { criterion: 'Présentation générale', grade: 4, max: 5, comment: 'Très propre et professionnel' }
+                    ]
+                },
+                'tableau-bord': {
+                    title: 'Tableau de bord',
+                    grade: 19,
+                    maxGrade: 20,
+                    comment: 'Travail remarquable ! Vos formules sont parfaites et les graphiques sont clairs.',
+                    details: [
+                        { criterion: 'Formules Excel', grade: 5, max: 5, comment: 'Formules complexes et parfaitement fonctionnelles' },
+                        { criterion: 'Graphiques et visualisation', grade: 5, max: 5, comment: 'Graphiques clairs et bien présentés' },
+                        { criterion: 'Analyse des données', grade: 5, max: 5, comment: 'Analyse pertinente et complète' },
+                        { criterion: 'Présentation générale', grade: 4, max: 5, comment: 'Parfait, mise en page soignée' }
+                    ]
+                }
+            };
+            
+            const correction = corrections[tpId];
+            if (!correction) return;
+            
+            let gradeClass = 'grade-a';
+            if (correction.grade < 16) gradeClass = 'grade-b';
+            if (correction.grade < 14) gradeClass = 'grade-c';
+            if (correction.grade < 12) gradeClass = 'grade-d';
+            
+            content.innerHTML = `
+                <div class="text-center mb-6">
+                    <div class="grade-display ${gradeClass} mx-auto mb-4">
+                        ${correction.grade}/${correction.maxGrade}
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">${correction.title}</h3>
+                    <p class="text-gray-600">${correction.comment}</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <h4 class="font-semibold text-gray-900">Détail de l'évaluation</h4>
+                    ${correction.details.map(item => `
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-gray-900">${item.criterion}</span>
+                                <span class="text-sm font-bold ${item.grade === item.max ? 'text-green-600' : 'text-gray-600'}">${item.grade}/${item.max}</span>
+                            </div>
+                            <p class="text-sm text-gray-600">${item.comment}</p>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                    <h5 class="font-semibold text-blue-900 mb-2">💡 Conseils pour améliorer</h5>
+                    <ul class="text-sm text-blue-800 space-y-1">
+                        <li>• Continuez à pratiquer les fonctionnalités avancées</li>
+                        <li>• Prêtez attention aux détails de mise en forme</li>
+                        <li>• Demandez de l'aide si vous avez des questions</li>
+                        <li>• Relisez toujours vos documents avant de les soumettre</li>
+                    </ul>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        function closeCorrectionModal() {
+            document.getElementById('correctionModal').classList.remove('active');
+        }
+
+        function downloadTP(tpId) {
+            showSuccess(`Téléchargement du TP ${tpId} (Simulation)`);
+        }
+
+        function createNewTP() {
+            showSuccess('Création d\'un nouveau TP (Simulation)');
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
+
+        // Fermer la modal en cliquant en dehors
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('correction-modal')) {
+                closeCorrectionModal();
+            }
+        });
+
+        // Échap pour fermer la modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeCorrectionModal();
+            }
+        });
+    </script>
+</body>
+</html>
